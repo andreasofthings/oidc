@@ -2,29 +2,82 @@ package main
 
 // [START import]
 import (
-	"fmt"
+	"context"
 	"log"
 	"net/http"
-	"os"
+
+	"github.com/gorilla/mux"
+	"golang.org/x/oauth2"
 )
 
-func main() {
-	http.HandleFunc("/", indexHandler)
-
-	port := os.Getenv("PORT")
-	if port == "" {
-		port = "8080"
-		log.Printf("Defaulting to port %s", port)
-	}
-
-	log.Printf("Listening on port %s", port)
-	log.Fatal(http.ListenAndServe(fmt.Sprintf(":%s", port), nil))
-}
+var (
+	client           *http.Client
+	ctx              context.Context
+	conf             *oauth2.Config
+	oauthStateString = "pseudo-random"
+)
 
 func indexHandler(w http.ResponseWriter, r *http.Request) {
-	if r.URL.Path != "/" {
-		http.NotFound(w, r)
-		return
+	w.WriteHeader(http.StatusOK)
+	var htmlIndex = `<html>
+	<body>
+		<a href="/login">Log In</a>
+	</body>
+	</html>`
+	w.Write([]byte(htmlIndex))
+}
+
+func loginHandler(w http.ResponseWriter, r *http.Request) {
+
+	// loginHandler initiates an OAuth flow to authenticate the user.
+	url := conf.AuthCodeURL(oauthStateString, oauth2.AccessTypeOffline)
+
+	http.Redirect(w, r, url, http.StatusFound)
+}
+
+func callbackHandler(w http.ResponseWriter, r *http.Request) {
+	// /callback Verify oauth2 state and errors.
+	var state = r.FormValue("state")
+	var code = r.FormValue("code")
+
+	if state != oauthStateString {
+		return // "invalid oauth state"
 	}
-	fmt.Fprint(w, "Hello, World!")
+
+	client = oauth2.NewClient(ctx, conf.Exchange(oauth2.HTTPClient, code))
+	token, err := conf.Exchange(oauth2.NoContext, code)
+	if err != nil {
+		return // "code exchange failed" //  %s", err.Error())
+	}
+
+	var client = oauth2.NewClient(ctx, token)
+
+	response, err := client.Get("https://www.pramari.de/api/user")
+	if err != nil {
+		return // "failed getting user info" // : %s", err.Error())
+	}
+	defer response.Body.Close()
+}
+
+func main() {
+	ctx := context.Background()
+
+	conf := &oauth2.Config{
+		ClientID:     "Y5Uy9Cg6vpaYE0bOyjraS52JoNw8Z3BKiCdLl1k1",
+		ClientSecret: "Sw4n6OP54IY18e0wBOMc4vKcZgH2ADJxKSSl0vV9Pg04znLbGJYaMPtPoL6JqFZK2UVlMj30toaJEhSW76xn7NTqRZjC1NFw3bE2vO0iMnsH2fr2xAicpr0XsQYABJc9",
+		Scopes:       []string{"read", "write"},
+		Endpoint: oauth2.Endpoint{
+			AuthURL:  "https://www.pramari.de/oauth2/authorize",
+			TokenURL: "https://www.pramari.de/oauth2/token",
+		},
+	}
+
+	r := mux.NewRouter()
+
+	r.HandleFunc("/", indexHandler)
+	r.HandleFunc("/login", loginHandler)
+	r.HandleFunc("/callback", callbackHandler)
+
+	http.Handle("/", r)
+	log.Fatal(http.ListenAndServe(":8000", r))
 }

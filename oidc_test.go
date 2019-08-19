@@ -52,3 +52,14 @@ func TestIndexHandlerNotFound(t *testing.T) {
 		)
 	}
 }
+
+func TestCallbackHandler(t *testing.T) {
+	req, err := http.NewRequest("GET", "/callback", nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	rr := httptest.NewRecorder()
+	handler := http.HandlerFunc(callbackHandler)
+	handler.ServeHTTP(rr, req)
+}
