@@ -3,6 +3,7 @@ package main
 // [START import]
 import (
 	"context"
+	"io/ioutil"
 	"log"
 	"net/http"
 
@@ -11,11 +12,12 @@ import (
 )
 
 var (
-	client           *http.Client
 	ctx              context.Context
 	conf             *oauth2.Config
 	oauthStateString = "pseudo-random"
 )
+
+// https://blog.kowalczyk.info/article/f/accessing-github-api-from-go.html
 
 func indexHandler(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusOK)
@@ -41,34 +43,43 @@ func callbackHandler(w http.ResponseWriter, r *http.Request) {
 	var code = r.FormValue("code")
 
 	if state != oauthStateString {
+		w.Write([]byte("Invalid State"))
 		return // "invalid oauth state"
 	}
 
-	client = oauth2.NewClient(ctx, conf.Exchange(oauth2.HTTPClient, code))
-	token, err := conf.Exchange(oauth2.NoContext, code)
+	token, err := conf.Exchange(ctx, code)
 	if err != nil {
+		w.Write([]byte("Code Exchange error"))
 		return // "code exchange failed" //  %s", err.Error())
 	}
 
-	var client = oauth2.NewClient(ctx, token)
+	client := conf.Client(ctx, token)
 
 	response, err := client.Get("https://www.pramari.de/api/user")
 	if err != nil {
+		w.Write([]byte("Generic API error"))
 		return // "failed getting user info" // : %s", err.Error())
 	}
 	defer response.Body.Close()
+	body, err := ioutil.ReadAll(response.Body)
+	if err != nil {
+		w.Write([]byte("Read API error"))
+		return // "failed getting user info" // : %s", err.Error())
+	}
+	w.Write(body)
 }
 
 func main() {
-	ctx := context.Background()
+	ctx = context.Background()
 
-	conf := &oauth2.Config{
+	conf = &oauth2.Config{
 		ClientID:     "Y5Uy9Cg6vpaYE0bOyjraS52JoNw8Z3BKiCdLl1k1",
 		ClientSecret: "Sw4n6OP54IY18e0wBOMc4vKcZgH2ADJxKSSl0vV9Pg04znLbGJYaMPtPoL6JqFZK2UVlMj30toaJEhSW76xn7NTqRZjC1NFw3bE2vO0iMnsH2fr2xAicpr0XsQYABJc9",
 		Scopes:       []string{"read", "write"},
+		RedirectURL:  "http://localhost:8000/callback",
 		Endpoint: oauth2.Endpoint{
-			AuthURL:  "https://www.pramari.de/oauth2/authorize",
-			TokenURL: "https://www.pramari.de/oauth2/token",
+			AuthURL:  "https://www.pramari.de/o/authorize",
+			TokenURL: "https://www.pramari.de/o/token",
 		},
 	}
 
