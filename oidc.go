@@ -78,8 +78,8 @@ func main() {
 		Scopes:       []string{"read", "write"},
 		RedirectURL:  "http://localhost:8000/callback",
 		Endpoint: oauth2.Endpoint{
-			AuthURL:  "https://www.pramari.de/o/authorize",
-			TokenURL: "https://www.pramari.de/o/token",
+			AuthURL:  "https://www.pramari.de/oauth2/authorize",
+			TokenURL: "https://www.pramari.de/oauth2/token",
 		},
 	}
 

@@ -5,6 +5,10 @@ steps:
 - name: 'gcr.io/cloud-builders/go'
   args: ['build', 'oidc']
   env: ['PROJECT_ROOT=oidc']
+- name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
+  entrypoint: 'gcloud'
+  args: ['app', 'deploy']
+
 artifacts:
   objects:
     location: 'gs://neumeier-org-oidc/'
