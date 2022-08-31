@@ -1,5 +1,13 @@
 runtime: go113
+env: standard
+instance_class: F1
 
 handlers:
 - url: /.*
   script: auto
+- url: .*
+  script: auto
+
+automatic_scaling:
+  min_idle_instances: 0
+  max_idle_instances: 1
