@@ -1,4 +1,4 @@
-runtime: go
+runtime: go119
 env: standard
 instance_class: F1
 
